@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    
+    <style>
+      div.tooltip {	
+        position: absolute;			
+        text-align: center;			
+        pointer-events: none;	
+        font-size: 12px;
+        font-weight: bold;
+        text-align: left;
+        background-color: #ccc;	
+        padding: 4px;
+        border-radius: 2px;
+      }
+    </style>
+    
+  </head>
+  <body>
+    <svg id="prices" width="1000" height="200"></svg>
+    <svg id="macd" width="1000" height="200"></svg>
+    
+    <script>
+      var closes = JSON.parse( '<%= closes %>' );
+      console.log( closes );
+      
+      var macd_data = JSON.parse( '<%= macd %>' );
+      console.log( macd_data );
+      
+      var svg = d3.select("#prices"),
+          margin = {top: 20, right: 20, bottom: 30, left: 50},
+          width = +svg.attr("width") - margin.left - margin.right,
+          height = +svg.attr("height") - margin.top - margin.bottom,
+          g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+          
+      var macd = d3.select("#macd"),
+          margin = {top: 20, right: 20, bottom: 30, left: 50},
+          width = +macd.attr("width") - margin.left - margin.right,
+          height = +macd.attr("height") - margin.top - margin.bottom,
+          macdg = macd.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      var format = d3.timeFormat("%y-%m-%d-%H");
+      
+      var div = d3.select("body").append("div")	
+        .attr("class", "tooltip")				
+        .style("opacity", 0);
+
+      var x = d3.scaleTime()
+          .rangeRound([0, width]);
+
+      var y = d3.scaleLinear()
+          .rangeRound([height, 0]);
+      var macdy = d3.scaleLinear()
+          .rangeRound([height, 0]);
+
+      var line = d3.line()
+        .x(function(d) { return x( new Date( d.timestamp ) ); })
+        .y(function(d) { return y(d.price); });
+        
+      var macd_line = d3.line()
+        .x(function(d, i) { return x( new Date( closes[closes.length - (i+1)].timestamp ) ); })
+        .y(function(d) { return macdy( d == null ? 0 : d[0] ); });
+      
+      var macd_signal_line = d3.line()
+        .x(function(d, i) { return x( new Date( closes[closes.length - (i+1)].timestamp ) ); })
+        .y(function(d) { return macdy( d == null ? 0 : d[1] ); });
+      
+      x.domain(d3.extent(closes, function(d) { return new Date( d.timestamp ); }));
+      y.domain([d3.min(closes, function(d) { return d.price; }), d3.max(closes, function(d) { return d.price; })]);
+      
+      macdy.domain([d3.min(macd_data.output, function(d) { return d == null ? 0 : d[0]; }), d3.max(macd_data.output, function(d) { return d == null ? 0 : d[0]; })]);
+      
+      g.append("g")
+                   .attr("transform", "translate(0," + height + ")")
+                   .call(d3.axisBottom(x)
+                     .tickFormat( format )
+                   )
+                 .select(".domain")
+                 .remove();
+      
+      macdg.append("g")
+        .attr("transform", "translate(0," + height + ")")
+        .call(d3.axisBottom(x)
+          .tickFormat( format )
+        );
+
+      g.append("g")
+        .call( d3.axisLeft(y) )
+      macdg.append("g")
+        .call( d3.axisLeft(macdy) )
+
+      g.append("path")
+                    .datum(closes)
+                    .attr("fill", "none")
+                    .attr("stroke", "steelblue")
+                    .attr("stroke-linejoin", "round")
+                    .attr("stroke-linecap", "round")
+                    .attr("stroke-width", 2)
+                    .attr("d", line);
+      
+      macdg.append("path")
+        .datum(macd_data.output)
+        .attr("fill", "none")
+        .attr("stroke", "steelblue")
+        .attr("stroke-linejoin", "round")
+        .attr("stroke-linecap", "round")
+        .attr("stroke-width", 2)
+        .attr("d", macd_line);
+        
+      macdg.append("path")
+        .datum(macd_data.output)
+        .attr("fill", "none")
+        .attr("stroke", "#ccc")
+        .attr("stroke-linejoin", "round")
+        .attr("stroke-linecap", "round")
+        .attr("stroke-width", 2)
+        .attr("d", macd_signal_line );
+        
+      g.selectAll("dot") 
+        .data(closes)      
+        .enter().append("circle")                
+        .attr("r", 3)    
+        .attr("cx", function(d) { return x( new Date( d.timestamp ) ); })     
+        .attr("cy", function(d) { return y(d.price); })
+        .on("mouseover", function(d) {   
+          div.transition()   
+              .style("opacity", .9);   
+          div  .html(format( new Date( d.timestamp ) ) + "<br/>"  + d.price) 
+              .style("left", (d3.event.pageX) + "px")    
+              .style("top", (d3.event.pageY - 28) + "px"); 
+          })         
+        .on("mouseout", function(d) {    
+          div.transition()   
+            .style("opacity", 0);  
+          });
+    </script>
+    
+  </body>
+</html>

@@ -22,24 +22,23 @@ module Gemini
           run Proc.new {|env| [200, {'Content-Type' => 'text/html'}, [docs.to_json] ] }
         end
 
-        # map '/reverse' do
-        #           run RunPortal::App.new
-        #         end
+        map '/prices' do
+          hourly_closes = Gemini::MDB_CLIENT[:hourly_closes]
+          closes = hourly_closes.find( {}, { projection: { _id: 0 }, limit: 72 } ).sort( {"timestamp": -1} )
+          
+          macd = Indicators::Data.new( closes.map{ |close| close[:price] }.reverse ).calc(:type => :macd, :params => [12, 26, 9])
+          
+          template_file = File.join( ::File.expand_path( "../", __FILE__ ), "../index.erb" )
+          template = Tilt['erb'].new( template_file )
+          
+          #erb :index
+          run Proc.new {|env| [200, {'Content-Type' => 'text/html'}, [ template.render( self, { :closes => closes.to_json, 
+                                                                                                :macd => macd.to_json } ) ] ] }
+        end
         #         
-        #         map '/lookup' do
-        #           run RunPortal::Lookup.new
-        #         end
-        #         
-        #         map '/sidekiq' do
-        #           run Sidekiq::Web
-        #         end
-        #         
-        #         map '/status' do
-        #           map '/' do
-        #             run RunPortal::Status.new
-        #           end
-        #         end
-        
+        #map '/lookup' do
+        #  run RunPortal::Lookup.new
+        #end
       end
     end
     
@@ -48,13 +47,3 @@ module Gemini
     end
   end
 end
-
-# map '/version' do
-#   map '/' do
-#     run Proc.new {|env| [200, {'Content-Type' => 'text/html'}, ['dddd']] }
-#   end
-# 
-#   map '/last' do
-#     run Proc.new {|env| [200, {'Content-Type' => 'text/html'}, ['sssss']] }
-#   end
-# end

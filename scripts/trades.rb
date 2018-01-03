@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-require "#{ ::File.expand_path( '../',  __FILE__ ) }/boot.rb"
+require "#{ ::File.expand_path( '../',  __FILE__ ) }/../boot.rb"
 
 hourly_closes = Gemini::MDB_CLIENT[:hourly_closes]
 hourly_closes.indexes.create_one( { timestamp: 1 }, { unique: true, background: true })
@@ -26,7 +26,3 @@ price_hash.each do |key,value|
   doc = { price: value[:price] }
   hourly_closes.update_one( { timestamp: value[:timestamp] }, { '$set' => doc }, { upsert: true } )
 end
-
-
-# my_data = Indicators::Data.new( price_hash.values )
-# p my_data.calc(:type => :macd, :params => [12, 26, 9])
