@@ -24,7 +24,7 @@ module Gemini
 
         map '/prices' do
           hourly_closes = Gemini::MDB_CLIENT[:hourly_closes]
-          closes = hourly_closes.find( {}, { projection: { _id: 0 }, limit: 72 } ).sort( {"timestamp": -1} )
+          closes = hourly_closes.find( {}, { projection: { _id: 0 }, limit: 100 } ).sort( {"timestamp": -1} )
           
           macd = Indicators::Data.new( closes.map{ |close| close[:price] }.reverse ).calc(:type => :macd, :params => [12, 26, 9])
           
